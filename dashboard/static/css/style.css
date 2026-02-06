@@ -1,0 +1,407 @@
+/* =========================================================
+   TATA MOTORS – SDC PORTAL
+   Corporate UI / Enterprise Theme
+   Author: Internal Systems – SDC
+========================================================= */
+
+/* ================= ROOT VARIABLES ================= */
+:root {
+    --tata-blue-dark: #003366;
+    --tata-blue: #004481;
+    --tata-blue-soft: #0b5fa5;
+    --tata-accent: #00a0df;
+
+    --bg-main: #f4f6f9;
+    --bg-white: #ffffff;
+    --bg-light: #f9fafb;
+
+    --text-dark: #1f2933;
+    --text-muted: #6b7280;
+    --text-light: #9ca3af;
+
+    --border-light: #e5e7eb;
+    --shadow-sm: 0 4px 10px rgba(0,0,0,0.06);
+    --shadow-md: 0 10px 28px rgba(0,0,0,0.12);
+    --shadow-lg: 0 18px 42px rgba(0,0,0,0.18);
+
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+
+    --transition: all 0.3s ease;
+}
+
+/* ================= RESET ================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+body {
+    background: var(--bg-main);
+    color: var(--text-dark);
+    line-height: 1.6;
+}
+
+/* ================= UTILITIES ================= */
+.container {
+    max-width: 1300px;
+    margin: auto;
+    padding: 0 24px;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* ================= HEADER ================= */
+.sdc-header {
+    width: 100%;
+}
+
+.top-header {
+    background: linear-gradient(135deg, var(--tata-blue-dark), var(--tata-blue));
+    color: white;
+    padding: 18px 0;
+    box-shadow: var(--shadow-sm);
+}
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Logo */
+.logo-area img {
+    height: 60px;
+}
+
+/* Brand Text */
+.brand-text h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.brand-text p {
+    font-size: 13px;
+    opacity: 0.85;
+}
+
+/* Header Actions */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-link {
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.9;
+    transition: var(--transition);
+}
+
+.header-link:hover {
+    opacity: 1;
+    color: var(--tata-accent);
+}
+
+.header-btn {
+    background: var(--tata-accent);
+    color: white;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.header-btn:hover {
+    background: #008cc4;
+}
+
+/* ================= HERO SECTION ================= */
+.hero-section {
+    padding: 40px 0;
+}
+
+.hero-layout {
+    display: flex;
+    gap: 30px;
+}
+
+/* Banner */
+.hero-banner {
+    flex: 2;
+    height: 420px;
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    background: #000;
+}
+
+.hero-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Banner Overlay */
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to top,
+        rgba(0,0,0,0.65),
+        rgba(0,0,0,0.15),
+        transparent
+    );
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 30px;
+    color: white;
+}
+
+.hero-overlay h2 {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.hero-overlay p {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+/* ================= TRAINING CARD ================= */
+.training-card {
+    flex: 1;
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    box-shadow: var(--shadow-md);
+    border-top: 5px solid var(--tata-accent);
+}
+
+.training-card h3 {
+    font-size: 18px;
+    color: var(--tata-blue-dark);
+    margin-bottom: 18px;
+}
+
+/* Training Rows */
+.training-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.training-row .label {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.training-row .value {
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+/* Training Actions */
+.training-actions {
+    margin-top: 20px;
+}
+
+.primary-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    background: var(--tata-blue);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+}
+
+.primary-btn:hover {
+    background: var(--tata-blue-soft);
+}
+
+/* ================= SYSTEMS SECTION ================= */
+.systems-section {
+    padding: 70px 0;
+}
+
+.section-header {
+    margin-bottom: 30px;
+}
+
+.section-header h2 {
+    font-size: 28px;
+    color: var(--tata-blue-dark);
+    margin-bottom: 8px;
+}
+
+.section-header p {
+    color: var(--text-muted);
+    max-width: 700px;
+}
+
+/* Systems Grid */
+.systems-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 28px;
+}
+
+/* System Card */
+.system-card {
+    background: var(--bg-white);
+    padding: 28px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    border-left: 5px solid var(--tata-accent);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.system-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Card Header */
+.system-card-header {
+    margin-bottom: 12px;
+}
+
+.system-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.system-card h3 {
+    font-size: 18px;
+    color: var(--tata-blue-dark);
+}
+
+/* Card Body */
+.system-card-body p {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* Card Footer */
+.system-card-footer {
+    margin-top: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tata-blue);
+}
+
+/* ================= ANNOUNCEMENTS ================= */
+.announcement-section {
+    background: var(--bg-light);
+    padding: 60px 0;
+}
+
+.announcement-section h2 {
+    font-size: 26px;
+    margin-bottom: 24px;
+    color: var(--tata-blue-dark);
+}
+
+.announcement-list {
+    display: grid;
+    gap: 20px;
+}
+
+.announcement-item {
+    background: var(--bg-white);
+    padding: 20px 24px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.announcement-item h4 {
+    font-size: 16px;
+    color: var(--tata-blue);
+    margin-bottom: 6px;
+}
+
+.announcement-item p {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* ================= FOOTER ================= */
+.sdc-footer {
+    background: var(--tata-blue-dark);
+    color: white;
+    padding: 24px 0;
+    margin-top: 60px;
+}
+
+.footer-layout {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.footer-left p {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.footer-right {
+    display: flex;
+    gap: 20px;
+}
+
+.footer-right a {
+    font-size: 13px;
+    opacity: 0.85;
+}
+
+.footer-right a:hover {
+    opacity: 1;
+    color: var(--tata-accent);
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 900px) {
+    .hero-layout {
+        flex-direction: column;
+    }
+
+    .header-container {
+        flex-direction: column;
+        gap: 14px;
+        text-align: center;
+    }
+
+    .header-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .footer-layout {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+}

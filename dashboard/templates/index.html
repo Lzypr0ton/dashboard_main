@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- ================= META ================= -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDC Portal | Tata Motors</title>
+
+    <!-- ================= STYLES ================= -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<!-- =========================================================
+     GLOBAL WRAPPER
+========================================================= -->
+<div id="app">
+
+    <!-- =====================================================
+         HEADER : BRANDING + QUICK LINKS
+    ====================================================== -->
+    <header class="sdc-header">
+
+        <!-- TOP CORPORATE BAR -->
+        <div class="top-header">
+            <div class="container header-container">
+
+                <!-- LOGO -->
+                <div class="logo-area">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}"
+                         alt="Tata Motors SDC Logo">
+                </div>
+
+                <!-- BRAND TEXT -->
+                <div class="brand-text">
+                    <h1>Self Development Centre</h1>
+                    <p>Tata Motors Limited</p>
+                </div>
+
+                <!-- USER ACTIONS -->
+                <div class="header-actions">
+                    <a href="#" class="header-link">Training Calendar</a>
+                    <a href="#" class="header-link">About SDC</a>
+                    <a href="#" class="header-link">Contact</a>
+                    <a href="/login" class="header-btn">Login</a>
+                </div>
+
+            </div>
+        </div>
+
+    </header>
+
+    <!-- =====================================================
+         HERO SECTION : BANNER + ANNOUNCEMENTS
+    ====================================================== -->
+    <section class="hero-section">
+        <div class="container hero-layout">
+
+            <!-- BANNER / SLIDER -->
+            <div class="hero-banner">
+                <img src="{{ url_for('static', filename='images/banner1.png') }}" class="slide active">
+                <img src="{{ url_for('static', filename='images/banner2.png') }}" class="slide">
+                 <img src="{{ url_for('static', filename='images/banner3.png') }}" class="slide">
+
+                <div class="hero-overlay">
+                    <h2>Building Future-Ready Workforce</h2>
+                    <p>Learning | Safety | Excellence | Innovation</p>
+                </div>
+            </div>
+
+            <!-- UPCOMING TRAINING PANEL -->
+            <aside class="training-card">
+                <h3>Upcoming Training Program</h3>
+
+                <div class="training-row">
+                    <span class="label">Program</span>
+                    <span class="value">Behavior Based Safety</span>
+                </div>
+
+                <div class="training-row">
+                    <span class="label">Date</span>
+                    <span class="value">01 February 2025</span>
+                </div>
+
+                <div class="training-row">
+                    <span class="label">Venue</span>
+                    <span class="value">Vayu Hall</span>
+                </div>
+
+                <div class="training-row">
+                    <span class="label">Faculty</span>
+                    <span class="value">Amit Kumar Patel</span>
+                </div>
+
+                <div class="training-row">
+                    <span class="label">Time</span>
+                    <span class="value">06:30 AM – 03:00 PM</span>
+                </div>
+
+                <div class="training-actions">
+                    <button class="primary-btn">View Full Calendar</button>
+                </div>
+            </aside>
+
+        </div>
+    </section>
+
+    <!-- =====================================================
+         SYSTEMS DASHBOARD
+    ====================================================== -->
+    <section class="systems-section">
+        <div class="container">
+
+            <div class="section-header">
+                <h2>Internal Digital Systems</h2>
+                <p>
+                    Centralized access to HR operations, training management,
+                    internships, performance tracking and live boards.
+                </p>
+            </div>
+
+            <!-- SYSTEM CARDS GRID -->
+            <div class="systems-grid">
+
+                {% for project in projects %}
+                <a href="{{ project.url }}" class="system-card">
+
+                    <div class="system-card-header">
+                        <div class="system-icon"></div>
+                        <h3>{{ project.name }}</h3>
+                    </div>
+
+                    <div class="system-card-body">
+                        <p>
+                            Secure access to {{ project.name }}
+                            module for authorized users.
+                        </p>
+                    </div>
+
+                    <div class="system-card-footer">
+                        <span>---></span>
+                    </div>
+
+                </a>
+                {% endfor %}
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =====================================================
+         ANNOUNCEMENTS SECTION
+    ====================================================== -->
+    <section class="announcement-section">
+        <div class="container">
+
+            <h2>SDC Announcements</h2>
+
+            <div class="announcement-list">
+
+                <div class="announcement-item">
+                    <h4>Safety Week Initiative</h4>
+                    <p>
+                        All departments are requested to nominate
+                        participants for Safety Week programs.
+                    </p>
+                </div>
+
+                <div class="announcement-item">
+                    <h4>Internship Batch 2026</h4>
+                    <p>
+                        Internship onboarding process begins from March 2026.
+                    </p>
+                </div>
+
+                <!-- DUPLICATE THIS BLOCK TO SCALE -->
+                <!-- announcement-item -->
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- =====================================================
+         FOOTER
+    ====================================================== -->
+    <footer class="sdc-footer">
+        <div class="container footer-layout">
+
+            <div class="footer-left">
+                <p>© 2026 Tata Motors Limited</p>
+                <p>Self Development Centre</p>
+            </div>
+
+            <div class="footer-right">
+                <a href="#">Privacy Policy</a>
+                <a href="#">IT Support</a>
+                <a href="#">Terms of Use</a>
+            </div>
+
+        </div>
+    </footer>
+
+</div>
+<!-- END APP -->
+
+</body>
+</html>
