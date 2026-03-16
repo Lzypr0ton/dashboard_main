@@ -13,3 +13,6 @@ To replicate these UI changes on another system:
 - `python manage.py runserver 0.0.0.0:8000`
 
 No other files were changed.
+
+
+Place the logo file at static/img/tata-logo.svg (relative to your project root). If static/img/ doesn’t exist, create it first.
