@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tata Motors - SDC Dashboard</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              DEFAULT: 'hsl(215 100% 25%)',
+              foreground: 'hsl(0 0% 100%)',
+            },
+            accent: {
+              DEFAULT: 'hsl(350 80% 50%)',
+              foreground: 'hsl(0 0% 100%)',
+            },
+            background: 'hsl(210 20% 98%)',
+            muted: {
+              DEFAULT: 'hsl(210 10% 90%)',
+              foreground: 'hsl(215 10% 45%)',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    /* Simple slider styles */
+    .slider-container { position: relative; overflow: hidden; height: 100%; }
+    .slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.5s ease-in-out; z-index: 1; }
+    .slide.active { opacity: 1; z-index: 2; }
+    
+    /* Modal styles */
+    .modal { display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+    .modal.active { display: flex; }
+  </style>
+</head>
+<body class="text-slate-800">
+
+  <!-- HEADER -->
+  <header class="fixed top-0 left-0 right-0 z-50 bg-white shadow-md border-b border-gray-200 h-16">
+    <div class="container mx-auto px-4 h-full flex items-center justify-between">
+      <!-- Left: Branding -->
+      <div class="flex items-center gap-3">
+        <img src="/images/logo.png" alt="SDC Logo" class="h-10 w-10 object-contain" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/8/8e/Tata_logo.svg'" />
+        <div class="flex flex-col">
+          <span class="text-primary font-bold text-lg leading-tight tracking-wide">TATA MOTORS</span>
+          <span class="text-muted-foreground text-xs font-semibold tracking-wider">SELF DEVELOPMENT CENTRE</span>
+        </div>
+      </div>
+
+      <!-- Center: Title -->
+      <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2">
+        <h1 class="text-primary font-bold text-xl uppercase tracking-widest border-b-2 border-accent pb-1">
+          SDC Dashboard
+        </h1>
+      </div>
+
+      <!-- Right: Navigation -->
+      <nav class="hidden md:flex items-center gap-1">
+        <a href="#" class="px-3 py-2 text-sm font-bold text-primary bg-blue-50 rounded-md">Dashboard</a>
+        <a href="#" class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-primary hover:bg-gray-50 rounded-md">Training Calendar</a>
+        <a href="#" class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-primary hover:bg-gray-50 rounded-md">Internship</a>
+        <a href="#" class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-primary hover:bg-gray-50 rounded-md">Live Board</a>
+        <a href="#" class="px-4 py-2 ml-2 bg-primary text-white text-sm font-bold rounded hover:bg-blue-800 shadow-sm">Login</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="container mx-auto px-4 pt-24 pb-8 min-h-screen">
+    
+    <!-- LIVE BOARD -->
+    <div class="mb-8 shadow-sm rounded-xl bg-primary text-primary-foreground overflow-hidden relative">
+      <div class="absolute right-0 top-0 h-full w-1/2 bg-white/5 skew-x-12 transform translate-x-1/4"></div>
+      <div class="p-6 flex flex-col md:flex-row items-center justify-between relative z-10">
+        <div class="flex items-center gap-8 mb-6 md:mb-0">
+          <div class="text-center md:text-left text-white">
+            <div id="live-clock" class="text-5xl font-mono font-bold tracking-tight mb-1">00:00:00</div>
+            <div id="live-date" class="text-white/80 uppercase tracking-widest text-sm font-semibold">Loading date...</div>
+          </div>
+          <div class="hidden md:block w-px h-16 bg-white/20"></div>
+          <div class="hidden md:block">
+            <h3 class="text-lg text-white font-bold mb-1">Live Status</h3>
+            <div class="flex gap-2">
+              <span class="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-bold">Systems Online</span>
+              <span class="bg-accent text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse" id="live-training-count">Live Training: 4</span>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white/10 rounded-lg p-4 backdrop-blur-sm w-full md:w-auto max-w-md border border-white/10">
+          <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2 opacity-80">Latest Notice</h4>
+          <p class="text-sm text-white font-medium leading-relaxed">
+            Annual maintenance scheduled for Server Room B on Feb 20th. Please save all work by 5 PM.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- HERO & TRAINING SECTION -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <!-- Image Slider -->
+      <div class="lg:col-span-2 relative overflow-hidden rounded-xl shadow-md h-[400px]">
+        <div class="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none"></div>
+        <div class="slider-container" id="slider">
+          <div class="slide active">
+            <img src="/images/slider-1.png" alt="Training" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1000&q=80'">
+            <div class="absolute bottom-8 left-8 z-20 text-white">
+              <h2 class="text-3xl font-bold mb-2">Empowering Future Engineers</h2>
+              <p class="text-lg text-gray-200">Leading the way in automotive innovation and training.</p>
+            </div>
+          </div>
+          <div class="slide">
+            <img src="/images/slider-2.png" alt="Workshop" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1000&q=80'">
+            <div class="absolute bottom-8 left-8 z-20 text-white">
+              <h2 class="text-3xl font-bold mb-2">Advanced Manufacturing Excellence</h2>
+              <p class="text-lg text-gray-200">State of the art facilities for hands-on learning.</p>
+            </div>
+          </div>
+          <div class="slide">
+            <img src="/images/slider-3.png" alt="Office" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1000&q=80'">
+            <div class="absolute bottom-8 left-8 z-20 text-white">
+              <h2 class="text-3xl font-bold mb-2">Digital Transformation in Auto</h2>
+              <p class="text-lg text-gray-200">Bridging the gap between software and hardware.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming Training Panel -->
+      <div class="bg-white rounded-xl shadow-md border border-gray-100 flex flex-col h-[400px] border-t-4 border-t-accent relative">
+        <div class="p-4 border-b bg-gray-50 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="calendar" class="text-accent h-5 w-5"></i>
+            <h3 class="font-bold text-primary">Upcoming Training</h3>
+          </div>
+          <button onclick="openModal()" class="h-8 w-8 flex items-center justify-center text-primary hover:bg-blue-100 rounded-full transition-colors" title="Add New Training">
+            <i data-lucide="plus" class="h-4 w-4"></i>
+          </button>
+        </div>
+        
+        <div class="flex-1 overflow-auto">
+          <div id="training-list" class="divide-y divide-gray-100">
+            <!-- Training items will be injected here via JS -->
+          </div>
+        </div>
+        <div class="p-3 border-t bg-gray-50 text-center">
+          <button class="text-xs font-bold text-primary hover:text-accent flex items-center justify-center gap-1 mx-auto uppercase">
+            View Full Calendar <i data-lucide="chevron-right" class="h-3 w-3"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODULES GRID -->
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-gray-800 border-l-4 border-primary pl-4 mb-1">Core Modules</h2>
+      <p class="text-gray-500 ml-5 text-sm">Select a module to access management tools</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Mod 1 -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all border-l-4 border-l-primary group cursor-pointer flex gap-4">
+        <div class="p-3 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">
+          <i data-lucide="users" class="h-8 w-8"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-800 group-hover:text-primary">Intern Allocation</h3>
+          <p class="text-sm text-gray-500">Manage intern placements and departments</p>
+        </div>
+      </div>
+      <!-- Mod 2 -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all border-l-4 border-l-accent group cursor-pointer flex gap-4">
+        <div class="p-3 rounded-lg bg-green-50 text-green-600 group-hover:bg-green-100 transition-colors">
+          <i data-lucide="trending-up" class="h-8 w-8"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-800 group-hover:text-primary">Performance Tracker</h3>
+          <p class="text-sm text-gray-500">Employee KPIs and appraisal data</p>
+        </div>
+      </div>
+      <!-- Mod 3 -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all border-l-4 border-l-primary group cursor-pointer flex gap-4">
+        <div class="p-3 rounded-lg bg-orange-50 text-orange-600 group-hover:bg-orange-100 transition-colors">
+          <i data-lucide="file-text" class="h-8 w-8"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-800 group-hover:text-primary">Student Records</h3>
+          <p class="text-sm text-gray-500">Attendance and academic history</p>
+        </div>
+      </div>
+      <!-- Mod 4 -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all border-l-4 border-l-accent group cursor-pointer flex gap-4">
+        <div class="p-3 rounded-lg bg-purple-50 text-purple-600 group-hover:bg-purple-100 transition-colors">
+          <i data-lucide="graduation-cap" class="h-8 w-8"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-800 group-hover:text-primary">Tests Management</h3>
+          <p class="text-sm text-gray-500">Schedule and grade assessments</p>
+        </div>
+      </div>
+      <!-- Mod 5 -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all border-l-4 border-l-primary group cursor-pointer flex gap-4">
+        <div class="p-3 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 transition-colors">
+          <i data-lucide="book-open" class="h-8 w-8"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-800 group-hover:text-primary">Training System</h3>
+          <p class="text-sm text-gray-500">Course materials and feedback</p>
+        </div>
+      </div>
+      <!-- Mod 6 -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all border-l-4 border-l-accent group cursor-pointer flex gap-4">
+        <div class="p-3 rounded-lg bg-red-50 text-red-600 group-hover:bg-red-100 transition-colors">
+          <i data-lucide="monitor-play" class="h-8 w-8"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-800 group-hover:text-primary">Display System</h3>
+          <p class="text-sm text-gray-500">Manage digital signage content</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ADD TRAINING MODAL -->
+  <div id="add-modal" class="modal">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 m-4 relative animate-in fade-in zoom-in duration-200">
+      <button onclick="closeModal()" class="absolute right-4 top-4 text-gray-400 hover:text-gray-600">
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+      
+      <h2 class="text-xl font-bold text-primary mb-4">Add New Training</h2>
+      
+      <form id="training-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Training Title</label>
+          <input type="text" id="t-title" required placeholder="e.g. EV Systems Overview" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <input type="text" id="t-date" required placeholder="e.g. Feb 10, 2025" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Time</label>
+            <input type="text" id="t-time" required placeholder="e.g. 10:00 AM" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Venue</label>
+          <input type="text" id="t-venue" required placeholder="e.g. Hall A" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+        </div>
+        
+        <button type="submit" class="w-full bg-primary text-white font-bold py-2 px-4 rounded-md hover:bg-blue-800 transition-colors mt-4">
+          Add Training
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- JS Scripts -->
+  <script>
+    // Initialize Icons First Time
+    lucide.createIcons();
+
+    // Clock Logic
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('live-clock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+      document.getElementById('live-date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Simple Image Slider Logic
+    const slides = document.querySelectorAll('.slide');
+    let currentSlide = 0;
+    
+    function nextSlide() {
+      slides[currentSlide].classList.remove('active');
+      currentSlide = (currentSlide + 1) % slides.length;
+      slides[currentSlide].classList.add('active');
+    }
+    setInterval(nextSlide, 4000);
+
+    // --- Dynamic Training List Logic --- //
+
+    // Initial Data
+    let trainings = [
+      { id: 1, title: "EV Systems Overview", date: "Feb 10", time: "10:00 AM", venue: "Hall A" },
+      { id: 2, title: "Safety Compliance", date: "Feb 12", time: "02:00 PM", venue: "Lab 3" },
+      { id: 3, title: "Leadership Workshop", date: "Feb 15", time: "09:00 AM", venue: "Conf Room" },
+      { id: 4, title: "Advanced CAD Tools", date: "Feb 18", time: "11:30 AM", venue: "Comp Lab" }
+    ];
+
+    const trainingListEl = document.getElementById('training-list');
+    const countBadge = document.getElementById('live-training-count');
+
+    // Render list
+    function renderTrainings() {
+      trainingListEl.innerHTML = '';
+      
+      if(trainings.length === 0) {
+        trainingListEl.innerHTML = `
+          <div class="p-8 text-center text-gray-500 text-sm">
+            No upcoming trainings scheduled.
+          </div>
+        `;
+      } else {
+        trainings.forEach(item => {
+          const div = document.createElement('div');
+          div.className = "p-4 hover:bg-gray-50 cursor-pointer group relative";
+          div.innerHTML = `
+            <div class="flex justify-between mb-1 pr-8">
+              <h4 class="font-bold text-gray-800 group-hover:text-primary">${item.title}</h4>
+              <span class="text-xs bg-white border px-2 py-0.5 rounded text-gray-500 shrink-0">${item.date}</span>
+            </div>
+            <div class="flex items-center gap-4 text-xs text-gray-500 mt-2">
+              <span class="flex items-center gap-1"><i data-lucide="clock" class="h-3 w-3"></i> ${item.time}</span>
+              <span class="flex items-center gap-1"><i data-lucide="map-pin" class="h-3 w-3"></i> ${item.venue}</span>
+            </div>
+            <button onclick="deleteTraining(${item.id})" class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 bg-white rounded-full p-1 transition-opacity">
+              <i data-lucide="trash-2" class="h-4 w-4"></i>
+            </button>
+          `;
+          trainingListEl.appendChild(div);
+        });
+      }
+      
+      // Update Live count badge
+      countBadge.textContent = `Live Training: ${trainings.length}`;
+      
+      // Re-initialize icons for new elements
+      lucide.createIcons();
+    }
+
+    // Modal Logic
+    const modal = document.getElementById('add-modal');
+    
+    function openModal() {
+      modal.classList.add('active');
+    }
+    
+    function closeModal() {
+      modal.classList.remove('active');
+      document.getElementById('training-form').reset();
+    }
+
+    // Handle Form Submit
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      
+      const newTraining = {
+        id: Date.now(),
+        title: document.getElementById('t-title').value,
+        date: document.getElementById('t-date').value,
+        time: document.getElementById('t-time').value,
+        venue: document.getElementById('t-venue').value,
+      };
+
+      trainings.push(newTraining);
+      renderTrainings();
+      closeModal();
+    }
+
+    // Handle Delete
+    function deleteTraining(id) {
+      trainings = trainings.filter(t => t.id !== id);
+      renderTrainings();
+    }
+
+    // Initial render
+    renderTrainings();
+
+  </script>
+</body>
+</html>
