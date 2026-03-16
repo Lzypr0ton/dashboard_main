@@ -1,0 +1,160 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Training Management System{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="flex flex-col gap-2">
+        <p class="text-sm uppercase tracking-wide text-gray-500">Overview</p>
+        <div class="flex flex-wrap items-end gap-3 justify-between">
+            <h1 class="text-2xl font-semibold text-primary">Training Control Center</h1>
+            <a href="/admin/" target="_blank" class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition shadow-sm">
+                <i class="fas fa-cogs mr-2"></i>Admin Panel
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <!-- Programs -->
+        <div class="bg-white rounded-xl shadow-card border border-gray-100 p-6 flex flex-col gap-4 hover:shadow-lg transition">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Programs</p>
+                    <h2 class="text-4xl font-bold text-primary mt-1">{{ total_program_schedules }}</h2>
+                    <p class="text-sm text-gray-500">Total Program Schedules</p>
+                </div>
+                <div class="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xl">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">Planned: {{ planned_schedules }}</span>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Completed: {{ completed_schedules }}</span>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">Postponed: {{ postponed_schedules }}</span>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Cancelled: {{ cancelled_schedules }}</span>
+            </div>
+            <div class="flex justify-end">
+                <a href="{% url 'dashboard:calendar_programs' %}" class="inline-flex items-center text-sm font-semibold text-primary hover:text-primary/80 transition">
+                    More info <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Employee Lookup -->
+        <div class="bg-white rounded-xl shadow-card border border-gray-100 overflow-hidden hover:shadow-lg transition">
+            <div class="bg-primary text-white px-6 py-4 flex items-center gap-3">
+                <div class="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center text-lg">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-xs uppercase tracking-wide text-white/70">Quick Lookup</p>
+                    <p class="text-base font-semibold">Employee Finder</p>
+                </div>
+            </div>
+            <div class="p-6 space-y-4" id="employeeLookupCard">
+                <form id="employeeLookupForm" class="flex flex-col sm:flex-row gap-3" autocomplete="off">
+                    <div class="flex-1">
+                        <label class="text-xs text-gray-500">P No.</label>
+                        <input type="text" id="pnoInput" required class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition" placeholder="Enter P No.">
+                    </div>
+                    <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition shadow-sm">
+                        Search
+                    </button>
+                </form>
+                <div class="border border-dashed border-gray-200 rounded-lg p-4 text-center text-sm text-gray-500" id="employeeDetails">
+                    Enter a P No. to look up an employee.
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Shortcut -->
+        <div class="bg-white rounded-xl shadow-card border border-gray-100 p-6 flex flex-col justify-between hover:shadow-lg transition">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">System</p>
+                    <h2 class="text-3xl font-bold text-primary mt-1">Admin Access</h2>
+                    <p class="text-sm text-gray-500">Manage users, data, and permissions.</p>
+                </div>
+                <div class="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xl">
+                    <i class="fas fa-cogs"></i>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <a href="/admin/" target="_blank" class="inline-flex items-center px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition shadow-sm">
+                    Open Admin <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('employeeLookupForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const pno = document.getElementById('pnoInput').value.trim();
+        const detailsDiv = document.getElementById('employeeDetails');
+        detailsDiv.innerHTML = '<div class="text-gray-500">Searching...</div>';
+        try {
+            const response = await fetch(`/dashboard/api/employee_lookup/?p_no=${encodeURIComponent(pno)}`);
+            if (!response.ok) throw new Error('Not found');
+            const data = await response.json();
+            if (data.success) {
+                let html = `
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-sm font-semibold">${data.name} <span class="text-gray-400">(${data.pers_no})</span></p>
+                            <p class="text-xs text-gray-500">${data.department || '-'}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-sm text-gray-700 mb-3">
+                        <p><span class="text-gray-500">Gender:</span> ${data.gender_key || '-'}</p>
+                        <p><span class="text-gray-500">Status:</span> ${data.employment_status || '-'}</p>
+                    </div>
+                    <div class="border-t border-gray-100 pt-3">
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Attendance</p>
+                        ${data.attendance && data.attendance.length > 0 ? `
+                            <div class="overflow-hidden border border-gray-100 rounded-lg">
+                                <table class="min-w-full text-left text-sm">
+                                    <thead class="bg-muted text-gray-700">
+                                        <tr>
+                                            <th class="px-3 py-2">Training</th>
+                                            <th class="px-3 py-2">Program</th>
+                                            <th class="px-3 py-2">Date</th>
+                                            <th class="px-3 py-2">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100">
+                                        ${data.attendance.map(a => `
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="px-3 py-2">${a.training_name}</td>
+                                                <td class="px-3 py-2">${a.program_name || '-'}</td>
+                                                <td class="px-3 py-2">${a.date || '-'}</td>
+                                                <td class="px-3 py-2">
+                                                    <span class="px-2 py-1 rounded-full text-xs font-semibold ${a.attended ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}">
+                                                        ${a.attended ? 'Attended' : 'Absent'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : `<div class="text-sm text-gray-500 text-center">No attendance records found.</div>`}
+                    </div>
+                `;
+                detailsDiv.innerHTML = html;
+            } else {
+                detailsDiv.innerHTML = '<div class="text-sm text-red-600">Employee not found.</div>';
+            }
+        } catch (err) {
+            detailsDiv.innerHTML = '<div class="text-sm text-red-600">Employee not found.</div>';
+        }
+    });
+</script>
+{% endblock %}

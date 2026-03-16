@@ -1,0 +1,161 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Training Management System{% endblock %}</title>
+    {% csrf_token %}
+
+    <!-- Inter font & Tailwind (JIT CDN with project palette) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: 'hsl(215, 100%, 25%)',
+                        accent: 'hsl(350, 80%, 50%)',
+                        page: 'hsl(210, 20%, 98%)',
+                        muted: 'hsl(210, 10%, 90%)'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        card: '0 10px 30px rgba(15, 23, 42, 0.05)'
+                    }
+                }
+            }
+        };
+    </script>
+
+    <!-- Legacy libraries kept for pages still using them -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/scale.css"/>
+
+    <style>
+        body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-page text-gray-900">
+    <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <aside class="hidden md:flex flex-col w-64 bg-primary text-white p-6 space-y-6 shadow-card">
+            <div class="flex items-center space-x-3">
+                <img src="{% static 'img/tata-logo.svg' %}" alt="Tata logo" class="h-10 w-10 object-contain bg-white rounded-lg p-1 shadow-sm">
+                <div class="leading-tight text-sm">
+                    <p class="font-semibold tracking-wide">SDC Training</p>
+                    <p class="font-semibold">Management</p>
+                </div>
+            </div>
+            <nav class="space-y-2 text-sm font-medium">
+                <a class="flex items-center px-3 py-2 rounded-lg transition {% if request.resolver_match.url_name == 'dashboard-home' %}bg-white/10 text-white{% else %}text-white/80 hover:bg-white/10{% endif %}" href="{% url 'dashboard:dashboard-home' %}">
+                    <i class="fas fa-home w-5"></i><span class="ml-3">Dashboard</span>
+                </a>
+                <div class="space-y-1">
+                    <p class="px-3 text-white/60 text-xs tracking-wide uppercase">Programs</p>
+                    <a class="flex items-center px-3 py-2 rounded-lg transition {% if request.resolver_match.url_name == 'all_programs' %}bg-white/10 text-white{% else %}text-white/80 hover:bg-white/10{% endif %}" href="{% url 'dashboard:all_programs' %}">
+                        <i class="fas fa-graduation-cap w-5"></i><span class="ml-3">All Programs</span>
+                    </a>
+                    <a class="flex items-center px-3 py-2 rounded-lg transition {% if request.resolver_match.url_name == 'calendar_programs' %}bg-white/10 text-white{% else %}text-white/80 hover:bg-white/10{% endif %}" href="{% url 'dashboard:calendar_programs' %}">
+                        <i class="far fa-calendar-alt w-5"></i><span class="ml-3">Calendar</span>
+                    </a>
+                    <a class="flex items-center px-3 py-2 rounded-lg transition {% if request.resolver_match.url_name == 'non_calendar_programs' %}bg-white/10 text-white{% else %}text-white/80 hover:bg-white/10{% endif %}" href="{% url 'dashboard:non_calendar_programs' %}">
+                        <i class="fas fa-stream w-5"></i><span class="ml-3">Non-Calendar</span>
+                    </a>
+                </div>
+                <a class="flex items-center px-3 py-2 rounded-lg transition {% if request.resolver_match.url_name == 'calendar' %}bg-white/10 text-white{% else %}text-white/80 hover:bg-white/10{% endif %}" href="{% url 'dashboard:calendar' %}">
+                    <i class="fas fa-clock w-5"></i><span class="ml-3">Scheduling</span>
+                </a>
+                {% if 'User Alpha' not in user_group_names and 'User Beta' not in user_group_names %}
+                <a class="flex items-center px-3 py-2 rounded-lg transition {% if request.resolver_match.url_name == 'register' %}bg-white/10 text-white{% else %}text-white/80 hover:bg-white/10{% endif %}" href="{% url 'dashboard:register' %}">
+                    <i class="fas fa-user-plus w-5"></i><span class="ml-3">Register</span>
+                </a>
+                {% endif %}
+                <div class="space-y-1">
+                    <p class="px-3 text-white/60 text-xs tracking-wide uppercase">Feedback & Assessment</p>
+                    <a class="flex items-center px-3 py-2 rounded-lg transition text-white/80 hover:bg-white/10" href="{% url 'dashboard:feedback_form' %}">
+                        <i class="fas fa-file-alt w-5"></i><span class="ml-3">Feedback Form</span>
+                    </a>
+                    <a class="flex items-center px-3 py-2 rounded-lg transition text-white/80 hover:bg-white/10" href="{% url 'dashboard:pre_assessment' %}">
+                        <i class="fas fa-clipboard-list w-5"></i><span class="ml-3">Pre Assessment</span>
+                    </a>
+                    <a class="flex items-center px-3 py-2 rounded-lg transition text-white/80 hover:bg-white/10" href="{% url 'dashboard:post_assessment' %}">
+                        <i class="fas fa-clipboard-check w-5"></i><span class="ml-3">Post Assessment</span>
+                    </a>
+                    <a class="flex items-center px-3 py-2 rounded-lg transition text-white/80 hover:bg-white/10" href="{% url 'dashboard:manager_checklist' %}">
+                        <i class="fas fa-tasks w-5"></i><span class="ml-3">Manager Checklist</span>
+                    </a>
+                    <a class="flex items-center px-3 py-2 rounded-lg transition text-white/80 hover:bg-white/10" href="{% url 'dashboard:roi' %}">
+                        <i class="fas fa-chart-line w-5"></i><span class="ml-3">ROI</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col min-h-screen">
+            <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-gray-200">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-start relative">
+                    <div class="flex items-center space-x-3 md:hidden h-full">
+                        <span class="text-lg font-semibold text-primary self-start mt-3">Training Management</span>
+                    </div>
+                    <div class="absolute right-0 top-2 flex items-center space-x-3">
+                        {% if user.is_superuser or user.is_staff or user.groups.all.0.name == 'User Alpha' %}
+                        <a class="hidden sm:inline-flex items-center px-3 py-2 text-sm font-semibold rounded-lg text-primary bg-primary/10 hover:bg-primary/20 transition" href="{% url 'dashboard:uploaded-files' %}">
+                            <i class="fas fa-file-upload mr-2"></i>Uploads
+                        </a>
+                        <a class="hidden sm:inline-flex items-center px-3 py-2 text-sm font-semibold rounded-lg text-primary bg-primary/10 hover:bg-primary/20 transition" href="{% url 'dashboard:upload_excel' %}">
+                            <i class="fas fa-file-excel mr-2"></i>Upload Excel
+                        </a>
+                        {% endif %}
+                        <div class="flex items-center space-x-3 bg-white border border-gray-200 rounded-full px-3 py-1 shadow-sm">
+                            <div class="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="leading-tight">
+                                <p class="text-sm font-semibold">{{ user.get_full_name|default:user.username }}</p>
+                                <p class="text-xs text-gray-500">
+                                    {% if user.is_superuser %}
+                                        Admin
+                                    {% elif user.groups.all.0.name == 'User Alpha' %}
+                                        User Alpha
+                                    {% elif user.groups.all.0.name == 'User Beta' %}
+                                        User Beta
+                                    {% else %}
+                                        User
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <a class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-accent text-white hover:opacity-90 transition" href="{% url 'logout' %}">
+                                Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- JS libs preserved for legacy views -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
