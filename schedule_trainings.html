@@ -1,0 +1,1700 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}Schedule Trainings for {{ program.name }}{% endblock %}
+{% block content %}
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+<div class="container py-4" 
+     data-user-role="{{ user_role }}"
+     data-can-edit="{% if can_edit %}true{% else %}false{% endif %}"
+     data-can-upload-download="{% if can_upload_download %}true{% else %}false{% endif %}"
+     data-is-admin="{% if is_admin %}true{% else %}false{% endif %}"
+     data-is-alpha="{% if is_alpha %}true{% else %}false{% endif %}"
+     data-is-beta="{% if is_beta %}true{% else %}false{% endif %}">
+  <!-- Add hidden div for program document URL -->
+  <div id="programDocUrl" data-url="{% if program.document %}{{ program.document.url }}{% endif %}" style="display: none;"></div>
+  
+  <div class="row mb-4">
+    <div class="col">
+      <h2>Schedule Trainings for Program: <span class="text-primary">{{ program.name }}</span></h2>
+      {% if is_alpha %}
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i> 
+          <strong>User Alpha Access:</strong> You can only edit the Students column and manage attendance files. All other fields are read-only.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Attendance export (new) -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <form class="row gy-2 gx-3 align-items-end" method="get" action="{% url 'dashboard:api_attendance_export' %}" target="_blank">
+        <div class="col-md-3">
+          <label class="form-label mb-1">Start date</label>
+          <input type="date" name="start" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label mb-1">End date</label>
+          <input type="date" name="end" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label mb-1">Status (optional)</label>
+          <select name="status" class="form-select form-select-sm">
+            <option value="">Any</option>
+            <option value="Planned">Planned</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+            <option value="Postpone">Postpone</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label mb-1">Program</label>
+          <input type="text" class="form-control form-control-sm" value="{{ program.id }}" readonly>
+          <input type="hidden" name="program_id" value="{{ program.id }}">
+        </div>
+        <div class="col-md-1 d-grid">
+          <button type="submit" class="btn btn-primary btn-sm w-100">Download CSV</button>
+        </div>
+      </form>
+      <small class="text-muted">Exports all attendance across trainings that match the filters above.</small>
+    </div>
+  </div>
+  
+  <form id="batchScheduleForm">
+    {% csrf_token %}  <!-- Add CSRF token to form -->
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Training</th>
+            <th>Date</th>
+            <th>End Date</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th style="width: 200px;">Faculty</th>
+            <th>Hall</th>
+            <th>Students</th>
+            <th>Documents</th>
+            <th>Attendance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for training in trainings %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center">
+                <span class="program-type-icon me-2" id="icon-{{ training.id }}">
+                  {% if training.schedule_for_selected_date and training.schedule_for_selected_date.program_type == 'Non Calendar Program' %}🗂️{% else %}📅{% endif %}
+                </span>
+                <span class="training-name">{{ training.training_name }}</span>
+                <input type="hidden" name="training_id" value="{{ training.id }}">
+              </div>
+              {% if can_edit %}
+              <div class="mt-2">
+                <select class="form-select form-select-sm d-inline-block w-auto training-type-select" data-training-id="{{ training.id }}">
+                  <option value="Calendar Program" {% if not training.schedule_for_selected_date or training.schedule_for_selected_date.program_type == 'Calendar Program' %}selected{% endif %}>Calendar Program</option>
+                  <option value="Non Calendar Program" {% if training.schedule_for_selected_date and training.schedule_for_selected_date.program_type == 'Non Calendar Program' %}selected{% endif %}>Non Calendar Program</option>
+                </select>
+                <button type="button" class="btn btn-sm btn-outline-primary ms-1 update-training-type-btn" data-training-id="{{ training.id }}">
+                  <i class="fas fa-save"></i> Update
+                </button>
+              </div>
+              {% endif %}
+            </td>
+            <td>
+              {% if can_edit %}
+                <input type="date" class="form-control training-date-input" name="date" required value="{{ default_start_date|date:'Y-m-d' }}">
+              {% elif is_alpha %}
+                <input type="date" class="form-control training-date-input" name="date" value="{{ default_start_date|date:'Y-m-d' }}" readonly disabled tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% else %}
+                <input type="date" class="form-control training-date-input" name="date" value="{{ default_start_date|date:'Y-m-d' }}" readonly tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% endif %}
+            </td>
+            <td>
+              {% if can_edit %}
+                <input type="date" class="form-control" name="end_date" value="{{ default_end_date|date:'Y-m-d' }}">
+              {% elif is_alpha %}
+                <input type="date" class="form-control" name="end_date" value="{{ default_end_date|date:'Y-m-d' }}" readonly disabled tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% else %}
+                <input type="date" class="form-control" name="end_date" value="{{ default_end_date|date:'Y-m-d' }}" readonly tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% endif %}
+            </td>
+            <td>
+              {% if can_edit %}
+                <input type="text" class="form-control" name="start_time" required>
+              {% elif is_alpha %}
+                <input type="text" class="form-control" name="start_time" value="{{ training.schedule_for_selected_date.start_time|default:'' }}" readonly disabled tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% else %}
+                <input type="text" class="form-control" name="start_time" value="{{ training.schedule_for_selected_date.start_time|default:'' }}" readonly tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% endif %}
+            </td>
+            <td>
+              {% if can_edit %}
+                <input type="text" class="form-control" name="end_time" required>
+              {% elif is_alpha %}
+                <input type="text" class="form-control" name="end_time" value="{{ training.schedule_for_selected_date.end_time|default:'' }}" readonly disabled tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% else %}
+                <input type="text" class="form-control" name="end_time" value="{{ training.schedule_for_selected_date.end_time|default:'' }}" readonly tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% endif %}
+            </td>
+            <td>
+              {% if can_edit %}
+                <div class="faculty-select-cell d-flex align-items-center gap-2">
+                  <span class="selected-faculty-name text-truncate" style="flex: 1; min-width: 0;">Select Faculty</span>
+                  <input type="hidden" name="faculty_id" value="">
+                  <button type="button" class="btn btn-outline-primary btn-sm select-faculty-btn flex-shrink-0" data-bs-toggle="modal" data-bs-target="#facultyPickerModal" title="Select Faculty">
+                    <i class="fas fa-search"></i>
+                  </button>
+                </div>
+              {% elif is_alpha %}
+                <input type="text" class="form-control" value="{{ training.schedule_for_selected_date.faculty.name|default:'' }}" readonly disabled tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% else %}
+                <input type="text" class="form-control" value="{{ training.schedule_for_selected_date.faculty.name|default:'' }}" readonly tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% endif %}
+            </td>
+            <td>
+              {% if can_edit %}
+                <div class="input-group">
+                  <select class="form-select" name="hall_id" required>
+                    <option value="">Select Hall</option>
+                    {% for h in halls %}
+                    <option value="{{ h.id }}">{{ h.name }} (Capacity: {{ h.capacity }})</option>
+                    {% endfor %}
+                  </select>
+                  <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addHallModal" title="Add Hall"><i class="fas fa-plus"></i></button>
+                </div>
+              {% elif is_alpha %}
+                <input type="text" class="form-control" value="{{ training.schedule_for_selected_date.hall.name|default:'' }}" readonly disabled tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% else %}
+                <input type="text" class="form-control" value="{{ training.schedule_for_selected_date.hall.name|default:'' }}" readonly tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% endif %}
+            </td>
+            <td>
+              {% if can_edit or is_alpha %}
+                <input type="number" class="form-control alpha-allowed" name="students" min="1" required>
+              {% else %}
+                <input type="number" class="form-control" name="students" value="{{ training.schedule_for_selected_date.students|default:'' }}" readonly tabindex="-1" style="pointer-events:none; background:#f8f9fa;">
+              {% endif %}
+            </td>
+            <td>
+              {% if can_upload_download or is_alpha %}
+                <div class="training-documents">
+                  <label class="btn btn-outline-secondary btn-sm mb-0" title="Upload PDF(s)">
+                    <i class="fas fa-paperclip"></i> Upload
+                    <input type="file" class="training-doc-input d-none" accept="application/pdf" multiple>
+                  </label>
+                  <div class="training-docs-list">
+                    {# Render already uploaded documents for this schedule #}
+                    {% if training.schedule_for_selected_date and training.schedule_for_selected_date.docs_for_template %}
+                      {% for doc in training.schedule_for_selected_date.docs_for_template %}
+                        <div class="training-doc-item d-flex align-items-center gap-2 mb-1">
+                          <a href="{{ doc.url }}" target="_blank" class="text-truncate" style="max-width: 150px;">
+                            <i class="fas fa-file-pdf text-danger"></i> {{ doc.name }}
+                          </a>
+                          <button type="button" class="btn btn-sm btn-outline-danger delete-doc" data-schedule-id="{{ training.schedule_for_selected_date.id }}" data-doc-id="{{ doc.id }}">
+                            <i class="fas fa-times"></i>
+                          </button>
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+                  </div>
+                </div>
+              {% else %}
+                <div class="training-documents">
+                  <div class="training-docs-list">
+                    {% if training.schedule_for_selected_date and training.schedule_for_selected_date.docs_for_template %}
+                      {% for doc in training.schedule_for_selected_date.docs_for_template %}
+                        <div class="training-doc-item d-flex align-items-center gap-2 mb-1">
+                          <a href="{{ doc.url }}" target="_blank" class="text-truncate" style="max-width: 150px;">
+                            <i class="fas fa-file-pdf text-danger"></i> {{ doc.name }}
+                          </a>
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+                  </div>
+                </div>
+              {% endif %}
+            </td>
+            <td>
+              <div class="attendance-status" data-training-id="{{ training.id }}">No file uploaded</div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="row align-items-center mt-3">
+      <div class="col-md-6 d-flex align-items-center gap-2 justify-content-start">
+        <!-- Removed program document upload form -->
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Redesigned Attendance Management Section -->
+{% if can_upload_download or is_alpha %}
+<div class="card mt-4">
+  <div class="card-header bg-primary text-white">
+    <h5 class="mb-0">Attendance Management</h5>
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle mb-0" id="attendanceTable" style="min-width: 600px;">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 60px; text-align: center;"><i class="fas fa-file-excel"></i></th>
+            <th style="width: 120px; text-align: center;">P No. Count</th>
+            <th style="width: 120px; text-align: center;">W/o P No.</th>
+            <th style="width: 120px; text-align: center;">Total Count</th>
+            <th style="min-width: 220px; text-align: center;">File Info & Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-center">
+              <input type="file" id="attendanceFile" class="alpha-allowed" accept=".xlsx,.xls" style="display: none;">
+              <button id="attendanceUploadBtn" class="btn btn-primary btn-sm file-button alpha-allowed" type="button">
+                <i class="fas fa-upload"></i>
+              </button>
+            </td>
+            <td class="text-center" id="pNoCount">0</td>
+            <td class="text-center" id="tpNoCount">0</td>
+            <td class="text-center" id="totalCount">0</td>
+            <td>
+              <div class="d-flex justify-content-between align-items-center">
+                <span id="attendanceFileName" class="text-muted">No file chosen</span>
+                <div class="btn-group">
+                  <a href="#" id="attendanceDownloadBtn" class="btn btn-success btn-sm alpha-allowed">
+                    <i class="fas fa-download"></i> Download
+                  </a>
+                  <button id="attendanceDeleteBtn" class="btn btn-danger btn-sm alpha-allowed" type="button">
+                    <i class="fas fa-trash"></i> Delete
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <small class="form-text text-muted mt-2">File should contain a 'P No.' column</small>
+  </div>
+</div>
+{% endif %}
+
+<!-- Action Buttons Section -->
+<div class="container mt-4 mb-4">
+    <div class="row">
+        <div class="col-12 text-end">
+            {% if can_edit or is_alpha %}
+            <button type="submit" form="batchScheduleForm" class="btn btn-primary alpha-allowed">Save All Schedules</button>
+            <button type="button" class="btn btn-info ms-2 alpha-allowed" id="attendanceReportBtn">
+                <i class="fas fa-file-alt"></i> Attendance Report
+            </button>
+            {% endif %}
+            <a href="{% url 'dashboard:dashboard-home' %}" class="btn btn-secondary ms-2">Cancel</a>
+        </div>
+    </div>
+</div>
+
+<!-- Add Faculty Modal -->
+<div class="modal fade" id="facultyPickerModal" tabindex="-1" aria-labelledby="facultyPickerModalLabel" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="facultyPickerModalLabel">Select Faculty Member</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="form-control mb-3" id="facultySearchInput" placeholder="Search faculty by name or department...">
+        <div id="facultySearchResults" style="max-height: 250px; overflow-y: auto;"></div>
+        <hr>
+        <form id="addFacultyForm">
+          <div class="mb-3">
+            <label for="facultyName" class="form-label">Faculty Name</label>
+            <input type="text" class="form-control" id="facultyName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="facultyTNo" class="form-label">Faculty T. No</label>
+            <input type="text" class="form-control" id="facultyTNo" name="faculty_t_no">
+          </div>
+          <div class="mb-3">
+            <label for="facultyDept" class="form-label">Faculty Department</label>
+            <input type="text" class="form-control" id="facultyDept" name="faculty_dept">
+          </div>
+          <div class="text-end">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add Faculty</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Hall Modal -->
+<div class="modal fade" id="addHallModal" tabindex="-1" aria-labelledby="addHallModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addHallModalLabel">Add New Hall</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addHallForm">
+          <div class="mb-3">
+            <label class="form-label">Hall Name</label>
+            <input type="text" class="form-control" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Capacity</label>
+            <input type="number" class="form-control" name="capacity" min="1" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Location</label>
+            <input type="text" class="form-control" name="location">
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Add Hall</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<style>
+#batchScheduleForm td, #batchScheduleForm th {
+  vertical-align: middle;
+  text-align: center;
+}
+#batchScheduleForm input.form-control, #batchScheduleForm select.form-select {
+  margin: 0 auto;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.97rem;
+}
+.program-type-icon {
+  font-size: 1.2em;
+}
+.badge {
+  font-size: 0.9em;
+  padding: 0.5em 0.8em;
+}
+.badge i {
+  margin-right: 0.3em;
+}
+.faculty-select-cell {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  transition: border-color 0.15s ease-in-out;
+}
+.faculty-select-cell.has-error {
+  border-color: #dc3545;
+}
+.faculty-error {
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  font-size: 0.75rem;
+  color: #dc3545;
+}
+.selected-faculty-name {
+  color: #495057;
+  font-size: 0.95rem;
+  margin-right: 0.5rem;
+}
+.select-faculty-btn {
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+}
+.select-faculty-btn:hover {
+  background-color: #e9ecef;
+}
+.table input.form-control, .table select.form-select { 
+  width: 90px; 
+  min-width: 60px; 
+  max-width: 120px; 
+  padding: 0.2rem 0.4rem; 
+  font-size: 0.95rem; 
+}
+.time-input { 
+  width: 70px !important; 
+}
+.time-ampm { 
+  width: 55px !important; 
+}
+.attendance-files-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.attendance-file-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: #f8f9fa;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.attendance-file-item .btn-sm {
+  padding: 0.125rem 0.25rem;
+}
+
+.custom-file-input {
+    position: relative;
+    display: inline-block;
+}
+
+.custom-file-input input[type="file"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.custom-file-input .file-button {
+    display: inline-block;
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    background: white;
+    cursor: pointer;
+    pointer-events: none; /* This ensures the button doesn't interfere with the input */
+}
+
+.modal {
+    display: none;
+}
+
+.modal.show {
+    display: block;
+}
+
+.training-documents {
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.training-docs-list {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0;
+    background: none;
+    padding: 0;
+    border-radius: 0;
+}
+
+.training-doc-item {
+    font-size: 0.95rem;
+    padding: 0.15rem 0.5rem;
+    background: #f8f9fa;
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0;
+}
+
+.training-doc-item a {
+    text-decoration: none;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.training-doc-item .delete-doc {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.85rem;
+    margin-left: 0.25rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Role-based access control
+document.addEventListener('DOMContentLoaded', function() {
+    // Get user role from data attributes
+    const container = document.querySelector('.container');
+    const userRole = container.dataset.userRole;
+    const canEdit = container.dataset.canEdit === 'true';
+    const canUploadDownload = container.dataset.canUploadDownload === 'true';
+    const isAdmin = container.dataset.isAdmin === 'true';
+    const isAlpha = container.dataset.isAlpha === 'true';
+    const isBeta = container.dataset.isBeta === 'true';
+    
+    console.log('User Role:', userRole);
+    console.log('Can Edit:', canEdit);
+    console.log('Can Upload/Download:', canUploadDownload);
+    console.log('Is Admin:', isAdmin);
+    console.log('Is Alpha:', isAlpha);
+    console.log('Is Beta:', isBeta);
+    
+    // Apply role-based restrictions
+    if (!canEdit) {
+        // Disable all form inputs except Students column for User Alpha
+        const formInputs = document.querySelectorAll('input[type="date"], input[type="text"], select, textarea');
+        formInputs.forEach(input => {
+            if (isAlpha && input.name === 'students') {
+                // User Alpha can edit Students column
+                input.disabled = false;
+            } else {
+                input.disabled = true;
+                input.style.backgroundColor = '#f8f9fa';
+                input.style.cursor = 'not-allowed';
+            }
+        });
+        
+        // Disable buttons except attendance-related ones for User Alpha
+        const buttons = document.querySelectorAll('button[type="submit"], .update-training-type-btn, .select-faculty-btn, .btn-outline-primary');
+        buttons.forEach(button => {
+            if (isAlpha && (button.id === 'attendanceUploadBtn' || button.id === 'attendanceDownloadBtn' || button.id === 'attendanceReportBtn')) {
+                // User Alpha can use attendance buttons
+                button.disabled = false;
+            } else {
+                button.disabled = true;
+                button.style.cursor = 'not-allowed';
+            }
+        });
+        
+        // Hide delete buttons for non-admin users
+        if (!isAdmin) {
+            const deleteButtons = document.querySelectorAll('.delete-doc, #attendanceDeleteBtn');
+            deleteButtons.forEach(button => {
+                button.style.display = 'none';
+            });
+        }
+    }
+    
+    // User Beta should not be able to access this page at all
+    if (isBeta) {
+        // This should be handled by the backend, but as a fallback
+        alert('User Beta does not have access to this page.');
+        window.location.href = '/dashboard/';
+    }
+});
+
+// Toast notification system
+(function() {
+    function showToast(message, type = 'info') {
+        const toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) {
+            console.error('Toast container not found');
+            return;
+        }
+        
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+        bsToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+
+    // Make showToast available globally
+    window.showToast = showToast;
+})();
+
+// Test if script is loading
+console.log('Script loaded');
+
+// Add smart time conversion functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Get program ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    window.programId = urlParams.get('program_id');
+    
+    if (!window.programId) {
+        console.error('Program ID not found in URL');
+        return;
+    }
+
+    // Function to convert smart time format to 12-hour format with AM/PM
+    function convertSmartTime(value) {
+        value = value.trim().toLowerCase();
+        
+        // If already in HH:MM AM/PM format, return as is
+        if (/^\d{1,2}:\d{2}\s*(AM|PM)$/i.test(value)) {
+            return value.toUpperCase();
+        }
+        
+        // Handle formats like 1000a, 1000p, 10a, 10p
+        let match = value.match(/^(\d{1,4})([ap])$/);
+        if (!match) {
+            return value;
+        }
+        
+        let [_, time, period] = match;
+        let hours, minutes;
+        
+        // Handle 4-digit time (e.g., 1030)
+        if (time.length === 4) {
+            hours = parseInt(time.substring(0, 2));
+            minutes = time.substring(2);
+        }
+        // Handle 3-digit time (e.g., 300)
+        else if (time.length === 3) {
+            // For 3-digit numbers, always treat first digit as hours
+            hours = parseInt(time.substring(0, 1));
+            minutes = time.substring(1);
+        }
+        // Handle 1 or 2-digit time (e.g., 10)
+        else {
+            hours = parseInt(time);
+            minutes = '00';
+        }
+        
+        // Convert to 12-hour format
+        let periodUpper = period.toUpperCase();
+        if (hours === 0) {
+            hours = 12;
+            periodUpper = 'AM';
+        } else if (hours === 12) {
+            periodUpper = 'PM';
+        } else if (hours > 12) {
+            hours -= 12;
+            periodUpper = 'PM';
+        } else {
+            // For PM times, keep the period as PM
+            if (period === 'p') {
+                periodUpper = 'PM';
+            } else {
+                periodUpper = 'AM';
+            }
+        }
+        
+        // Ensure minutes are padded to 2 digits
+        minutes = minutes.padStart(2, '0');
+        
+        // Format the time with AM/PM
+        return `${hours.toString().padStart(2, '0')}:${minutes} ${periodUpper}`;
+    }
+    
+    // Add event listeners to all smart-time inputs
+    document.querySelectorAll('.smart-time').forEach(input => {
+        let lastValue = '';
+        
+        // Handle keyup events
+        input.addEventListener('keyup', function(e) {
+            // Only allow numbers and a/p
+            let value = this.value.replace(/[^0-9apAP]/g, '');
+            
+            // If the value hasn't changed, do nothing
+            if (value === lastValue) {
+                return;
+            }
+            
+            // Update the input with cleaned value
+            this.value = value;
+            lastValue = value;
+            
+            // Only convert if we have a complete time pattern
+            if (value.match(/^\d{1,4}[ap]$/i)) {
+                // Use setTimeout to ensure the value is updated first
+                setTimeout(() => {
+                    this.value = convertSmartTime(value);
+                }, 0);
+            }
+        });
+        
+        // Handle enter key
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (this.value.match(/^\d{1,4}[ap]$/i)) {
+                    this.value = convertSmartTime(this.value);
+                }
+            }
+        });
+        
+        // Prevent paste of invalid characters
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            let pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            pastedText = pastedText.replace(/[^0-9apAP]/g, '');
+            this.value = pastedText;
+        });
+    });
+});
+
+// Attendance Management Section JS
+function handleAttendanceUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const button = document.getElementById('attendanceUploadBtn');
+    const originalHtml = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    // Get the correct trainingId and date for attendance management
+    const urlParams = new URLSearchParams(window.location.search);
+    const trainingId = urlParams.get('trainings');
+    const selectedDate = urlParams.get('selected_date') || (window.selectedDateStr || "{{ selected_date }}");
+    if (!trainingId || !selectedDate) {
+        alert('No training or date selected');
+        button.innerHTML = originalHtml;
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('training_id', trainingId);
+    formData.append('date', selectedDate);
+
+    document.getElementById('attendanceFileName').textContent = file.name;
+
+    // Get CSRF token
+    const csrftoken = getCookie('csrftoken');
+    if (!csrftoken) {
+        showToast('CSRF token not found. Please refresh the page and try again.', 'error');
+        button.innerHTML = originalHtml;
+        return;
+    }
+
+    // Analyze file
+    fetch(`/training/${trainingId}/analyze-attendance/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': csrftoken
+        },
+        credentials: 'same-origin'
+    })
+    .then(async response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const responseText = await response.text();
+        try {
+            return JSON.parse(responseText);
+        } catch (e) {
+            throw new Error('Invalid JSON response from server');
+        }
+    })
+    .then(data => {
+        if (!data.success) throw new Error(data.error || 'Error analyzing attendance file');
+        document.getElementById('pNoCount').textContent = data.p_no_count || 0;
+        document.getElementById('tpNoCount').textContent = data.without_p_no_count || 0;
+        document.getElementById('totalCount').textContent = data.total_count || 0;
+        // Proceed with upload
+        return fetch(`/api/trainings/${trainingId}/upload_attendance/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            credentials: 'same-origin'
+        });
+    })
+    .then(async response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const responseText = await response.text();
+        try {
+            return JSON.parse(responseText);
+        } catch (e) {
+            throw new Error('Invalid JSON response from server');
+        }
+    })
+    .then(data => {
+        if (!data.success) throw new Error(data.error || 'Error uploading attendance file');
+        showToast('Attendance file uploaded successfully!', 'success');
+        updateAttendanceStatus(trainingId, selectedDate);
+    })
+    .catch(error => {
+        showToast('Error: ' + error.message, 'error');
+        document.getElementById('attendanceFileName').textContent = 'No file chosen';
+        document.getElementById('attendanceDownloadBtn').style.display = 'none';
+        document.getElementById('attendanceDeleteBtn').style.display = 'none';
+    })
+    .finally(() => {
+        button.innerHTML = originalHtml;
+        input.value = '';
+    });
+}
+
+document.getElementById('attendanceUploadBtn').addEventListener('click', function() {
+    document.getElementById('attendanceFile').click();
+});
+document.getElementById('attendanceFile').addEventListener('change', function() {
+    handleAttendanceUpload(this);
+});
+
+document.getElementById('attendanceDeleteBtn').addEventListener('click', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const trainingId = urlParams.get('trainings');
+    const selectedDate = urlParams.get('selected_date') || (window.selectedDateStr || "{{ selected_date }}");
+    if (!trainingId || !selectedDate) {
+        alert('No training or date selected');
+        return;
+    }
+    if (!confirm('Are you sure you want to delete the attendance file?')) {
+        return;
+    }
+    fetch(`/api/trainings/${trainingId}/delete_attendance/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `date=${encodeURIComponent(selectedDate)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Attendance file deleted successfully!', 'success');
+            document.getElementById('attendanceFileName').textContent = 'No file chosen';
+            document.getElementById('pNoCount').textContent = '0';
+            document.getElementById('tpNoCount').textContent = '0';
+            document.getElementById('totalCount').textContent = '0';
+            document.getElementById('attendanceDownloadBtn').style.display = 'none';
+            document.getElementById('attendanceDeleteBtn').style.display = 'none';
+        } else {
+            showToast(data.error || 'Failed to delete attendance file', 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Error: ' + error.message, 'error');
+    });
+});
+
+function updateAttendanceStatus(trainingId, selectedDate) {
+    fetch(`/api/trainings/${trainingId}/attendance/status/?date=${encodeURIComponent(selectedDate)}`)
+        .then(async response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const responseText = await response.text();
+            try {
+                return JSON.parse(responseText);
+            } catch (e) {
+                throw new Error('Invalid JSON response from server');
+            }
+        })
+        .then(data => {
+            if (!data.success) {
+                throw new Error(data.error || 'Error getting attendance status');
+            }
+            if (data.file_info) {
+                document.getElementById('attendanceFileName').textContent = data.file_info.name;
+                document.getElementById('attendanceDownloadBtn').href = `/api/trainings/${trainingId}/download_attendance/?date=${encodeURIComponent(selectedDate)}`;
+                document.getElementById('attendanceDownloadBtn').style.display = 'inline-block';
+                document.getElementById('attendanceDeleteBtn').style.display = 'inline-block';
+            } else {
+                document.getElementById('attendanceFileName').textContent = 'No file chosen';
+                document.getElementById('attendanceDownloadBtn').style.display = 'none';
+                document.getElementById('attendanceDeleteBtn').style.display = 'none';
+            }
+            // Update counts
+            document.getElementById('pNoCount').textContent = data.p_no_count || 0;
+            document.getElementById('tpNoCount').textContent = data.without_p_no_count || 0;
+            document.getElementById('totalCount').textContent = data.total_count || 0;
+        })
+        .catch(error => {
+            console.error('Error updating attendance status:', error);
+            showToast('Error updating attendance status: ' + error.message, 'error');
+            document.getElementById('attendanceFileName').textContent = 'No file chosen';
+            document.getElementById('attendanceDownloadBtn').style.display = 'none';
+            document.getElementById('attendanceDeleteBtn').style.display = 'none';
+        });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const trainingId = urlParams.get('trainings');
+    const selectedDate = urlParams.get('selected_date') || (window.selectedDateStr || "{{ selected_date }}");
+    if (trainingId && selectedDate) {
+        updateAttendanceStatus(trainingId, selectedDate);
+    }
+});
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Update the faculty search and selection code
+document.addEventListener('DOMContentLoaded', function() {
+    const facultySearchInput = document.getElementById('facultySearchInput');
+    const facultySearchResults = document.getElementById('facultySearchResults');
+    let searchTimeout;
+    let currentFacultyCell = null;
+
+    // Function to update faculty selection
+    function updateFacultySelection(facultyId, facultyName, cell) {
+        if (!cell) return;
+        
+        const nameSpan = cell.querySelector('.selected-faculty-name');
+        const idInput = cell.querySelector('input[name="faculty_id"]');
+        
+        if (nameSpan) {
+            nameSpan.textContent = facultyName || 'Select Faculty';
+            nameSpan.title = facultyName || 'Select Faculty';
+        }
+        if (idInput) {
+            idInput.value = facultyId || '';
+        }
+        
+        // Trigger change event to ensure form validation
+        if (idInput) {
+            idInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    // Update modal open handler
+    document.querySelectorAll('.select-faculty-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentFacultyCell = this.closest('.faculty-select-cell');
+            // Clear previous search
+            if (facultySearchInput) {
+                facultySearchInput.value = '';
+            }
+            if (facultySearchResults) {
+                facultySearchResults.innerHTML = '';
+            }
+        });
+    });
+
+    if (facultySearchInput && facultySearchResults) {
+        facultySearchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const searchTerm = this.value.trim();
+            
+            facultySearchResults.innerHTML = '';
+            
+            if (searchTerm.length < 2) {
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                fetch(`/api/faculty/?search=${encodeURIComponent(searchTerm)}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(faculty => {
+                    facultySearchResults.innerHTML = '';
+                    
+                    if (faculty.error) {
+                        facultySearchResults.innerHTML = `<div class="text-danger p-2">${faculty.error}</div>`;
+                        return;
+                    }
+                    
+                    if (faculty.length === 0) {
+                        facultySearchResults.innerHTML = '<div class="text-muted p-2">No faculty found</div>';
+                        return;
+                    }
+                    
+                    faculty.forEach(f => {
+                        const div = document.createElement('div');
+                        div.className = 'faculty-search-item p-2 border-bottom';
+                        div.style.cursor = 'pointer';
+                        div.innerHTML = `
+                            <div class="fw-bold">${f.name}</div>
+                            <div class="small text-muted">
+                                ${f.faculty_dept || ''}
+                                ${f.faculty_t_no ? ` | T. No: ${f.faculty_t_no}` : ''}
+                            </div>
+                        `;
+                        
+                        div.addEventListener('click', function() {
+                            updateFacultySelection(f.id, f.name, currentFacultyCell);
+                            
+                            // Close the modal
+                            const modal = document.getElementById('facultyPickerModal');
+                            const modalInstance = bootstrap.Modal.getInstance(modal);
+                            if (modalInstance) {
+                                modalInstance.hide();
+                            }
+                        });
+                        
+                        facultySearchResults.appendChild(div);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error searching faculty:', error);
+                    facultySearchResults.innerHTML = '<div class="text-danger p-2">Error searching faculty</div>';
+                });
+            }, 300);
+        });
+    }
+
+    // Update form submission to validate faculty
+    document.getElementById('batchScheduleForm').addEventListener('submit', function(e) {
+        const rows = this.querySelectorAll('tbody tr');
+        let hasError = false;
+        
+        rows.forEach(row => {
+            const facultyId = row.querySelector('input[name="faculty_id"]')?.value;
+            const facultyName = row.querySelector('.selected-faculty-name')?.textContent;
+            
+            if (!facultyId || facultyName === 'Select Faculty') {
+                hasError = true;
+                const facultyCell = row.querySelector('.faculty-select-cell');
+                if (facultyCell) {
+                    facultyCell.style.borderColor = '#dc3545';
+                    // Add error message if not exists
+                    let errorMsg = facultyCell.querySelector('.faculty-error');
+                    if (!errorMsg) {
+                        errorMsg = document.createElement('div');
+                        errorMsg.className = 'faculty-error text-danger small mt-1';
+                        errorMsg.textContent = 'Please select a faculty member';
+                        facultyCell.appendChild(errorMsg);
+                    }
+                }
+            }
+        });
+        
+        if (hasError) {
+            e.preventDefault();
+            showToast('Please select faculty for all trainings', 'error');
+            return;
+        }
+    });
+
+    // Clear error styling when faculty is selected
+    document.querySelectorAll('.faculty-select-cell').forEach(cell => {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                    const facultyId = cell.querySelector('input[name="faculty_id"]')?.value;
+                    const facultyName = cell.querySelector('.selected-faculty-name')?.textContent;
+                    
+                    if (facultyId && facultyName !== 'Select Faculty') {
+                        cell.style.borderColor = '';
+                        const errorMsg = cell.querySelector('.faculty-error');
+                        if (errorMsg) {
+                            errorMsg.remove();
+                        }
+                    }
+                }
+            });
+        });
+        
+        observer.observe(cell, {
+            childList: true,
+            characterData: true,
+            subtree: true
+        });
+    });
+});
+
+// Add form submission handling
+document.addEventListener('DOMContentLoaded', function() {
+    const saveAllBtn = document.querySelector('button[onclick="saveTrainingSchedules()"]');
+    if (saveAllBtn) {
+        saveAllBtn.addEventListener('click', async function(e) {
+    e.preventDefault();
+            try {
+                await saveTrainingSchedules();
+                // Only redirect after successful save
+            window.location.href = '/calendar/';
+    } catch (error) {
+                console.error('Error saving schedules:', error);
+        showToast(error.message || 'Error saving schedules', 'error');
+            }
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the selected date from the context
+    const selectedDate = "{{ selected_date }}";
+    console.log('[DEBUG] Selected date:', selectedDate);
+
+    // Parse the existing schedules JSON string
+    let existingSchedules = [];
+    try {
+        // The existing_schedules_json is already a JSON string from the backend
+        // We need to properly escape it to avoid template syntax issues
+        const existingSchedulesJson = JSON.parse('{{ existing_schedules_json|escapejs }}');
+        console.log('[DEBUG] Raw existing schedules JSON:', existingSchedulesJson);
+        
+        // Only try to parse if we have actual data
+        if (existingSchedulesJson && Array.isArray(existingSchedulesJson)) {
+            existingSchedules = existingSchedulesJson;
+            console.log('[DEBUG] Successfully parsed existing schedules:', existingSchedules);
+        } else {
+            console.log('[DEBUG] No existing schedules found or invalid format');
+            existingSchedules = [];
+        }
+    } catch (error) {
+        console.error('[DEBUG] Error parsing existing schedules:', error);
+        console.error('[DEBUG] Raw JSON that caused the error:', '{{ existing_schedules_json|escapejs }}');
+        existingSchedules = [];
+        // Show a user-friendly error message
+        showToast('Error loading existing schedules. Some data may not be displayed correctly.', 'warning');
+    }
+
+    // Prefill form fields for each training
+    document.querySelectorAll('tr').forEach(row => {
+        const trainingId = row.querySelector('input[name="training_id"]')?.value;
+        if (!trainingId) return;
+
+        // Find existing schedule for this training and date
+        const existingSchedule = existingSchedules.find(s => 
+            s && s.training_id === parseInt(trainingId) && 
+            s.date === selectedDate
+        );
+
+        if (existingSchedule) {
+            console.log('[DEBUG] Found existing schedule for training:', trainingId, existingSchedule);
+            // Prefill the form fields
+            const dateInput = row.querySelector('input[name="date"]');
+            const startTimeInput = row.querySelector('input[name="start_time"]');
+            const endTimeInput = row.querySelector('input[name="end_time"]');
+            const hallSelect = row.querySelector('select[name="hall_id"]');
+            const studentsInput = row.querySelector('input[name="students"]');
+            const facultyInput = row.querySelector('input[name="faculty_id"]');
+            const facultyNameSpan = row.querySelector('.selected-faculty-name');
+
+            // Only set values if they exist and are not null
+            if (dateInput && existingSchedule.date) dateInput.value = existingSchedule.date;
+            if (startTimeInput && existingSchedule.start_time) startTimeInput.value = existingSchedule.start_time;
+            if (endTimeInput && existingSchedule.end_time) endTimeInput.value = existingSchedule.end_time;
+            if (hallSelect && existingSchedule.hall_id) hallSelect.value = existingSchedule.hall_id;
+            if (studentsInput && existingSchedule.students) studentsInput.value = existingSchedule.students;
+            if (facultyInput && existingSchedule.faculty_id) facultyInput.value = existingSchedule.faculty_id;
+            if (facultyNameSpan) {
+                facultyNameSpan.textContent = existingSchedule.faculty_name || 'Select Faculty';
+                facultyNameSpan.title = existingSchedule.faculty_name || 'Select Faculty';
+            }
+
+            // Debug log the prefilled values
+            console.log('[DEBUG] Prefilled values:', {
+                date: dateInput?.value,
+                startTime: startTimeInput?.value,
+                endTime: endTimeInput?.value,
+                hallId: hallSelect?.value,
+                students: studentsInput?.value,
+                facultyId: facultyInput?.value,
+                facultyName: facultyNameSpan?.textContent
+            });
+
+            // Set the scheduleId on the row
+            row.dataset.scheduleId = existingSchedule.id;
+        } else {
+            console.log('[DEBUG] No existing schedule for training:', trainingId);
+            // Set the date to the selected date
+            const dateInput = row.querySelector('input[name="date"]');
+            if (dateInput && selectedDate) {
+                dateInput.value = selectedDate;
+            }
+        }
+    });
+
+    // Get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Add event listener for program type update button
+    document.querySelectorAll('.update-training-type-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            const trainingId = this.dataset.trainingId;
+            const select = document.querySelector(`.training-type-select[data-training-id="${trainingId}"]`);
+            const programType = select.value;
+            const row = this.closest('tr');
+            const trainingName = row.querySelector('.training-name')?.textContent || 'Unknown Training';
+            const scheduleId = row.dataset.scheduleId; // Assume you have a data-schedule-id attribute on the row
+
+            if (!scheduleId) {
+                showToast('No schedule found for this training. Please save the schedule first.', 'error');
+                return;
+            }
+
+            try {
+                console.log(`[DEBUG] Updating schedule type for ${trainingName} (Schedule ID: ${scheduleId}) to ${programType}`);
+                const response = await fetch(`/api/schedules/${scheduleId}/update-type/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ program_type: programType })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to update schedule type');
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast(`Schedule type updated successfully for ${trainingName}!`, 'success');
+                    // Use the returned schedule data to update the icon and dropdown
+                    if (data.schedule) {
+                        const updatedType = data.schedule.program_type;
+                        const icon = document.getElementById(`icon-${trainingId}`);
+                        if (icon) {
+                            icon.textContent = updatedType === 'Non Calendar Program' ? '🗂️' : '📅';
+                        }
+                        select.value = updatedType;
+                    }
+                    // Refresh the calendar view to reflect the new type/icon
+                    if (typeof forceRefreshCalendar === 'function') {
+                        forceRefreshCalendar();
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to update schedule type');
+                }
+            } catch (error) {
+                console.error('[DEBUG] Error updating schedule type:', error);
+                showToast(`Error updating schedule type for ${trainingName}: ${error.message}`, 'error');
+                // Reset the select to its previous value
+                select.value = select.dataset.originalValue || 'Calendar Program';
+            }
+        });
+    });
+
+    // Store original values for program type selects
+    document.querySelectorAll('.training-type-select').forEach(select => {
+        select.dataset.originalValue = select.value;
+    });
+
+    // Form submission handler
+    document.getElementById('batchScheduleForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        console.log('[DEBUG] Form submitted');
+
+        const formData = [];
+        let hasValidData = false;
+
+        // Collect data from each row
+        document.querySelectorAll('tr').forEach((row, index) => {
+            const trainingId = row.querySelector('input[name="training_id"]')?.value;
+            if (!trainingId) return;
+
+            const date = row.querySelector('input[name="date"]')?.value;
+            const startTime = row.querySelector('input[name="start_time"]')?.value;
+            const endTime = row.querySelector('input[name="end_time"]')?.value;
+            const hallId = row.querySelector('select[name="hall_id"]')?.value;
+            const students = row.querySelector('input[name="students"]')?.value;
+            const facultyId = row.querySelector('input[name="faculty_id"]')?.value;
+            const facultyName = row.querySelector('.selected-faculty-name')?.textContent;
+            const programType = row.querySelector('.training-type-select')?.value;
+
+            // Debug log the values for each field
+            console.log(`[DEBUG] Row ${index + 1} values:`, {
+                trainingId,
+                date,
+                startTime,
+                endTime,
+                hallId,
+                students,
+                facultyId,
+                facultyName,
+                programType
+            });
+
+            // Only include rows with required fields filled
+            if (date && startTime && endTime && hallId && students && facultyId) {
+                hasValidData = true;
+                formData.push({
+                    training_id: trainingId,
+                    date: date,
+                    start_time: startTime,
+                    end_time: endTime,
+                    hall_id: hallId,
+                    students: students,
+                    faculty_ids: [facultyId],  // Send as array for consistency
+                    program_type: programType  // Include program type
+                });
+            }
+        });
+
+        if (!hasValidData) {
+            console.log('[DEBUG] No valid data found in any row');
+            showToast('Please fill in all required fields for at least one training.', 'error');
+            return;
+        }
+
+        try {
+            console.log('[DEBUG] Submitting schedule data:', formData);
+            const response = await fetch('/api/schedules/batch/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    program_id: "{{ program.id }}",
+                    schedules: formData
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to save schedules');
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                showToast('Schedules saved successfully!', 'success');
+                // Redirect back to calendar view
+                setTimeout(() => {
+                    window.location.href = '/calendar/';
+                }, 1000);
+            } else {
+                throw new Error(data.error || 'Failed to save schedules');
+            }
+        } catch (error) {
+            console.error('[DEBUG] Error saving schedules:', error);
+            showToast(error.message || 'Error saving schedules. Please try again.', 'error');
+        }
+    });
+});
+
+// Function to create or get the documents list container
+function getOrCreateDocsList(form) {
+    let docsList = form.querySelector('.training-docs-list');
+    if (!docsList) {
+        docsList = document.createElement('div');
+        docsList.className = 'training-docs-list small d-flex align-items-center gap-2 mb-0';
+        docsList.dataset.trainingId = form.querySelector('input[name="training_id"]').value;
+        docsList.dataset.date = form.querySelector('.training-date-input').value;
+        // Insert after the label (paperclip icon)
+        const label = form.querySelector('label');
+        if (label && label.nextSibling) {
+            form.insertBefore(docsList, label.nextSibling);
+        } else {
+            form.appendChild(docsList);
+        }
+    }
+    return docsList;
+}
+
+// Handle document uploads
+document.querySelectorAll('.training-doc-input').forEach(input => {
+    input.addEventListener('change', async function(e) {
+        const files = Array.from(this.files);
+        if (files.length === 0) return;
+
+        const form = this.closest('form');
+        const trainingId = form.querySelector('input[name="training_id"]').value;
+        const trainingDate = form.querySelector('.training-date-input').value;
+        const docsList = getOrCreateDocsList(form);
+        const button = this.previousElementSibling;
+        const originalButtonHtml = button.innerHTML;
+
+        // Show loading state
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        try {
+            // Get the schedule ID for this training and date
+            const scheduleResponse = await fetch(`/api/schedules/training/${trainingId}/?date=${trainingDate}`);
+            if (!scheduleResponse.ok) {
+                throw new Error('Failed to get schedule information');
+            }
+            const scheduleData = await scheduleResponse.json();
+            
+            let scheduleId = scheduleData.schedule_id;
+            
+            // Only allow upload if schedule exists
+            if (!scheduleId) {
+                showToast('Please save the schedule before uploading documents.', 'error');
+                button.innerHTML = originalButtonHtml;
+                this.value = '';
+                return;
+            }
+
+            // Upload each file
+            for (const file of files) {
+                if (!file.name.toLowerCase().endsWith('.pdf')) {
+                    throw new Error('Only PDF files are allowed');
+                }
+
+                const formData = new FormData();
+                formData.append('document', file);
+
+                const uploadResponse = await fetch(`/api/schedules/${scheduleId}/upload-document/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: formData
+                });
+
+                if (!uploadResponse.ok) {
+                    const errorData = await uploadResponse.json();
+                    throw new Error(errorData.error || 'Failed to upload document');
+                }
+
+                const uploadData = await uploadResponse.json();
+                if (!uploadData.success) {
+                    throw new Error(uploadData.error || 'Failed to upload document');
+                }
+
+                // Clear and re-render the documents list from uploadData.documents
+                docsList.innerHTML = '';
+                uploadData.documents.forEach(doc => {
+                    const docItem = document.createElement('div');
+                    docItem.className = 'training-doc-item d-flex align-items-center gap-2 mb-1';
+                    docItem.innerHTML = `
+                        <a href="${doc.url}" target="_blank" class="text-truncate" style="max-width: 150px;">
+                            <i class="fas fa-file-pdf text-danger"></i> ${doc.name}
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-danger delete-doc" 
+                                data-schedule-id="${scheduleId}" data-doc-id="${doc.id}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    docsList.appendChild(docItem);
+                });
+
+                showToast(`Document uploaded successfully for ${trainingDate}!`, 'success');
+            }
+        } catch (error) {
+            console.error('[DEBUG] Error uploading document:', error);
+            showToast(error.message || 'Error uploading document', 'error');
+        } finally {
+            // Reset button and input
+            button.innerHTML = originalButtonHtml;
+            this.value = '';
+        }
+    });
+});
+
+// Handle document deletion
+document.addEventListener('click', async function(e) {
+    if (e.target.closest('.delete-doc')) {
+        const button = e.target.closest('.delete-doc');
+        const scheduleId = button.dataset.scheduleId;
+        const docId = button.dataset.docId;
+        if (!confirm('Are you sure you want to delete this document?')) {
+            return;
+        }
+        try {
+            const response = await fetch(`/api/schedules/${scheduleId}/upload-document/?doc_id=${docId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete document');
+            }
+            const data = await response.json();
+            // Clear and re-render the documents list from data.documents
+            const docsList = button.closest('.training-documents').querySelector('.training-docs-list');
+            docsList.innerHTML = '';
+            data.documents.forEach(doc => {
+                const docItem = document.createElement('div');
+                docItem.className = 'training-doc-item d-flex align-items-center gap-2 mb-1';
+                docItem.innerHTML = `
+                    <a href="${doc.url}" target="_blank" class="text-truncate" style="max-width: 150px;">
+                        <i class="fas fa-file-pdf text-danger"></i> ${doc.name}
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger delete-doc" 
+                            data-schedule-id="${scheduleId}" data-doc-id="${doc.id}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                docsList.appendChild(docItem);
+            });
+            showToast('Document deleted successfully!', 'success');
+        } catch (error) {
+            console.error('[DEBUG] Error deleting document:', error);
+            showToast(error.message || 'Error deleting document', 'error');
+        }
+    }
+});
+
+// Function to get color based on status
+function getStatusColor(status) {
+    switch(status) {
+        case 'Planned':
+            return '#17a2b8';  // Bootstrap info color
+        case 'Available':
+            return '#28a745';  // Bootstrap success color
+        case 'Conflict':
+            return '#dc3545';  // Bootstrap danger color
+        case 'Leave':
+            return '#ffc107';  // Bootstrap warning color
+        default:
+            return '#6c757d';  // Bootstrap secondary color
+    }
+}
+
+// Add click handler for attendance report button
+document.getElementById('attendanceReportBtn').addEventListener('click', function() {
+    // Get program ID and training IDs from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const programId = urlParams.get('program_id');
+    const trainingIds = urlParams.get('trainings');
+    
+    if (!programId || !trainingIds) {
+        alert('Missing program ID or training IDs');
+        return;
+    }
+    
+    // Change button state to loading
+    const button = this;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Report...';
+    button.disabled = true;
+    
+    // Redirect to the attendance report generation endpoint
+    window.location.href = `/api/attendance/report/?program_id=${programId}&training_ids=${trainingIds}`;
+    
+    // Reset button state after a delay
+    setTimeout(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }, 2000);
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  const isAlpha = document.querySelector('.container').dataset.isAlpha === 'true';
+  if (isAlpha) {
+    // Disable all inputs, selects, and buttons except those with .alpha-allowed
+    document.querySelectorAll('input, select, button, textarea').forEach(el => {
+      if (!el.classList.contains('alpha-allowed')) {
+        el.disabled = true;
+        el.readOnly = true;
+        el.style.pointerEvents = 'none';
+        el.style.background = '#f8f9fa';
+      }
+    });
+    // Enable Students input
+    document.querySelectorAll('input[name="students"]').forEach(el => {
+      el.disabled = false;
+      el.readOnly = false;
+      el.style.pointerEvents = '';
+      el.style.background = '';
+    });
+    // Enable allowed buttons/links
+    document.querySelectorAll('.alpha-allowed').forEach(el => {
+      el.disabled = false;
+      el.readOnly = false;
+      el.style.pointerEvents = '';
+      el.style.background = '';
+    });
+  }
+});
+
+// Add after DOMContentLoaded
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Helper to parse and format time
+    function parseTimeInput(val) {
+        val = val.trim().toLowerCase();
+        if (!val) return '';
+        // Handle 2p, 2pm, 230p, 230pm, 1030a, 10:30am, etc.
+        let match = val.match(/^(\d{1,2})(:?)(\d{2})?\s*([ap]m?)?$/);
+        if (match) {
+            let hour = parseInt(match[1], 10);
+            let minute = match[3] ? parseInt(match[3], 10) : 0;
+            let ampm = match[4];
+            if (ampm) {
+                if (ampm.startsWith('p') && hour < 12) hour += 12;
+                if (ampm.startsWith('a') && hour === 12) hour = 0;
+            }
+            if (hour > 23 || minute > 59) return '';
+            return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        }
+        // Handle 2p, 2pm
+        match = val.match(/^(\d{1,2})\s*([ap]m?)$/);
+        if (match) {
+            let hour = parseInt(match[1], 10);
+            let ampm = match[2];
+            if (ampm.startsWith('p') && hour < 12) hour += 12;
+            if (ampm.startsWith('a') && hour === 12) hour = 0;
+            return `${hour.toString().padStart(2, '0')}:00`;
+        }
+        // Handle 4-digit military time (e.g., 1530)
+        match = val.match(/^(\d{4})$/);
+        if (match) {
+            let hour = parseInt(val.slice(0,2), 10);
+            let minute = parseInt(val.slice(2,4), 10);
+            if (hour > 23 || minute > 59) return '';
+            return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        }
+        // Handle 2-digit hour (e.g., 9)
+        match = val.match(/^(\d{1,2})$/);
+        if (match) {
+            let hour = parseInt(match[1], 10);
+            if (hour > 23) return '';
+            return `${hour.toString().padStart(2, '0')}:00`;
+        }
+        return '';
+    }
+
+    // Auto-format on blur
+    document.querySelectorAll('input[name="start_time"], input[name="end_time"]').forEach(input => {
+        input.addEventListener('blur', function() {
+            const formatted = parseTimeInput(this.value);
+            if (formatted) this.value = formatted;
+        });
+        // Prevent Enter from submitting the form
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.blur();
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 
