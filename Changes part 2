@@ -63,3 +63,58 @@ def api_attendance_report(request):
 Use whatever template variables you already have for start/end/status/program; if you only have a month picker, set start to the first day and end to the last day in your view/JS before rendering the link.
 
 Files touched: `dashboard/new_views.py`, `dashboard/urls.py`, and the template where you place the button. Nothing else changes.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+To replicate on another machine, copy these three files to the same paths:
+
+dashboard/new_views.py (contains the new api_attendance_report and the csv import)
+dashboard/urls.py (adds the api/attendance/export/ route)
+dashboard/templates/dashboard/schedule_trainings.html (adds the export form/button)
+Those are the only files changed.
+
+
+
+
+
+
+
