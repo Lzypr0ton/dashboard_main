@@ -1,0 +1,6 @@
+Yes—copy these three files to the same paths on the other machine:
+
+dashboard/new_views.py
+dashboard/urls.py
+dashboard/templates/dashboard/schedule_trainings.html
+They already contain the export logic and the UI button. No other files need changes. After copying, run the server and test the CSV download.
