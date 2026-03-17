@@ -1,0 +1,65 @@
+Here are the exact snippets to copy into the project on any machine.
+
+1) Add the export view (append near other API views) in `dashboard/new_views.py`
+```python
+# add near the other imports
+from django.http import HttpResponse
+import csv
+
+# add near other models already imported
+from .models import TrainingAttendance
+
+@login_required
+def api_attendance_report(request):
+    """
+    CSV export of attendance with optional filters:
+    ?start=YYYY-MM-DD&end=YYYY-MM-DD&status=Planned|Completed|Cancelled&program_id=ID
+    """
+    start = request.GET.get('start')
+    end = request.GET.get('end')
+    status = request.GET.get('status')
+    program_id = request.GET.get('program_id')
+
+    qs = TrainingAttendance.objects.select_related('training', 'training__program')
+    if start:
+        qs = qs.filter(date__gte=start)
+    if end:
+        qs = qs.filter(date__lte=end)
+    if status:
+        qs = qs.filter(training__schedule__status__iexact=status)  # adjust if your Schedule relation differs
+    if program_id:
+        qs = qs.filter(training__program_id=program_id)
+    qs = qs.distinct()
+
+    resp = HttpResponse(content_type='text/csv')
+    resp['Content-Disposition'] = f'attachment; filename=attendance_{start or "all"}_{end or "all"}.csv'
+    writer = csv.writer(resp)
+    writer.writerow(['Program', 'Training', 'P No', 'Employee Name', 'Date', 'Attended'])
+    for att in qs:
+        prog = att.training.program.name if att.training and att.training.program else ''
+        writer.writerow([
+            prog,
+            att.training.training_name if att.training else '',
+            att.employee.pers_no if att.employee else '',
+            att.employee.name if att.employee else '',
+            att.date.isoformat() if att.date else '',
+            'Yes' if att.attended else 'No'
+        ])
+    return resp
+```
+
+2) Wire the URL in `dashboard/urls.py` (add one line in urlpatterns):
+```python
+    path('api/attendance/report/', new_views.api_attendance_report, name='api_attendance_report'),
+```
+
+3) Add a download button in the schedule page template (e.g., `dashboard/templates/dashboard/schedule_trainings.html`) where your month filters sit:
+```html
+<a class="btn btn-sm btn-primary"
+   href="/dashboard/api/attendance/report/?start={{ start_date }}&end={{ end_date }}&status={{ status_filter }}&program_id={{ program_id }}">
+   Download Attendance (CSV)
+</a>
+```
+Use whatever template variables you already have for start/end/status/program; if you only have a month picker, set start to the first day and end to the last day in your view/JS before rendering the link.
+
+Files touched: `dashboard/new_views.py`, `dashboard/urls.py`, and the template where you place the button. Nothing else changes.
